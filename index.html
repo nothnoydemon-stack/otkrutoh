@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Для тебя</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: #02030a;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+
+  #space {
+    position: fixed;
+    inset: 0;
+    display: block;
+    z-index: 0;
+  }
+
+  .stage {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 10;
+  }
+
+  .card {
+    max-width: 640px;
+    width: 100%;
+    text-align: center;
+    padding: 46px 36px;
+    border-radius: 28px;
+    background: rgba(8, 10, 26, 0.5);
+    border: 1px solid rgba(150, 175, 255, 0.16);
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+    box-shadow: 0 34px 100px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255,255,255,0.07);
+    animation: fadeUp 1.6s cubic-bezier(.2,.8,.2,1) both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(30px) scale(.97); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  .line {
+    font-size: clamp(19px, 4.4vw, 27px);
+    line-height: 1.58;
+    color: #eef1ff;
+    font-weight: 300;
+    letter-spacing: .2px;
+    opacity: 0;
+    animation: show .95s ease forwards;
+    text-shadow: 0 0 30px rgba(140, 170, 255, .28);
+  }
+  .line:nth-child(1) { animation-delay: .6s; }
+  .line:nth-child(2) { animation-delay: 2.0s; }
+  .line:nth-child(3) { animation-delay: 3.4s; }
+  .line:nth-child(4) { animation-delay: 4.8s; }
+
+  @keyframes show { to { opacity: 1; } }
+
+  .accent {
+    background: linear-gradient(100deg, #ffd6e8, #b8c6ff 45%, #9be7ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-weight: 600;
+  }
+
+  .btn {
+    margin-top: 34px;
+    padding: 16px 34px;
+    font-size: 16px;
+    letter-spacing: .4px;
+    color: #070a16;
+    background: linear-gradient(100deg, #ffd6e8, #b8c6ff 55%, #9be7ff);
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    font-weight: 600;
+    opacity: 0;
+    animation: show .8s ease 6.1s forwards;
+    transition: transform .25s ease, box-shadow .25s ease;
+    box-shadow: 0 10px 40px rgba(150, 175, 255, .3);
+  }
+  .btn:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 18px 52px rgba(150, 175, 255, .5); }
+  .btn:active { transform: scale(.98); }
+
+  .hidden { display: none; }
+
+  .heart {
+    font-size: 58px;
+    margin-bottom: 18px;
+    display: inline-block;
+    animation: beat 1.35s ease-in-out infinite;
+    filter: drop-shadow(0 0 26px rgba(255, 160, 210, .8));
+  }
+  @keyframes beat {
+    0%, 100% { transform: scale(1); }
+    18%      { transform: scale(1.18); }
+    36%      { transform: scale(1); }
+    54%      { transform: scale(1.1); }
+  }
+
+  .reply-btn {
+    display: inline-block;
+    margin-top: 28px;
+    padding: 14px 32px;
+    font-size: 15px;
+    letter-spacing: .6px;
+    font-weight: 600;
+    color: #070a16;
+    text-decoration: none;
+    background: linear-gradient(100deg, #ffd6e8, #b8c6ff 55%, #9be7ff);
+    border-radius: 999px;
+    box-shadow: 0 10px 40px rgba(150, 175, 255, .3);
+    transition: transform .25s ease, box-shadow .25s ease;
+  }
+  .reply-btn:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 18px 52px rgba(150, 175, 255, .5);
+  }
+  .reply-btn:active { transform: scale(.98); }
+</style>
+</head>
+<body>
+
+<canvas id="space"></canvas>
+
+<div class="stage">
+  <div class="card" id="card">
+    <div class="line" id="l1">Я хочу тебе кое-что сказать.</div>
+    <div class="line accent" id="l2">И это весь день не выходит из головы.</div>
+    <div class="line" id="l3">Ничего не нужно отвечать —</div>
+    <div class="line accent" id="l4">просто нажми на кнопку.</div>
+    <button class="btn" id="btn">Открыть →</button>
+  </div>
+
+  <div class="card hidden" id="final">
+    <div class="heart">♡</div>
+    <div class="line accent">Ты — лучшее, что случилось со мной.</div>
+    <div class="line" style="margin-top:22px">И это не открытка.<br>Это я просто <b>так</b> думаю о тебе.</div>
+    <a class="reply-btn" href="https://t.me/OHA_COMA_BUHOBATA" target="_blank" rel="noopener">Написать мне →</a>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('space');
+const ctx = canvas.getContext('2d');
+const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+let W = 0, H = 0, DPR = Math.min(devicePixelRatio || 1, 2);
+let stars = [], meteors = [], nebulas = [], sparks = [];
+let t = 0;
+
+function resize() {
+  W = canvas.width = Math.floor(innerWidth * DPR);
+  H = canvas.height = Math.floor(innerHeight * DPR);
+  canvas.style.width = innerWidth + 'px';
+  canvas.style.height = innerHeight + 'px';
+  build();
+}
+
+function build() {
+  // звёзды в 3 слоях (параллакс)
+  stars = [];
+  const density = Math.min(900, Math.floor((innerWidth * innerHeight) / 2000));
+  for (let i = 0; i < density; i++) {
+    const layer = i < density * 0.55 ? 0 : (i < density * 0.85 ? 1 : 2);
+    stars.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      r: (0.25 + Math.random() * 1.15) * (layer + 1) * 0.7 * DPR,
+      a: 0.25 + Math.random() * 0.75,
+      layer,
+      speed: (0.02 + Math.random() * 0.05) * (layer + 1),
+      phase: Math.random() * Math.PI * 2,
+      hue: Math.random() < 0.12 ? (Math.random() < 0.5 ? 205 : 285) : 220
+    });
+  }
+
+  // туманности
+  nebulas = [];
+  const palette = [
+    [130, 90, 255], [255, 90, 170], [70, 180, 255], [180, 120, 255], [60, 220, 200]
+  ];
+  for (let i = 0; i < 6; i++) {
+    const c = palette[i % palette.length];
+    nebulas.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      r: (180 + Math.random() * 420) * DPR,
+      c,
+      a: 0.055 + Math.random() * 0.07,
+      dx: (Math.random() - 0.5) * 0.12,
+      dy: (Math.random() - 0.5) * 0.12,
+      ph: Math.random() * 6.28
+    });
+  }
+
+  meteors = [];
+}
+
+function addMeteor() {
+  const fromLeft = Math.random() < 0.5;
+  meteors.push({
+    x: fromLeft ? -80 * DPR : W + 80 * DPR,
+    y: Math.random() * H * 0.55,
+    vx: (fromLeft ? 1 : -1) * (7 + Math.random() * 6) * DPR,
+    vy: (2.2 + Math.random() * 2.6) * DPR,
+    len: (120 + Math.random() * 160) * DPR,
+    life: 1,
+    hue: Math.random() < 0.3 ? 320 : 205
+  });
+}
+
+function addSparks(x, y, n = 26) {
+  for (let i = 0; i < n; i++) {
+    const ang = Math.random() * Math.PI * 2;
+    const spd = Math.random() * 3.4 + 0.9;
+    sparks.push({
+      x, y,
+      vx: Math.cos(ang) * spd * DPR,
+      vy: Math.sin(ang) * spd * DPR,
+      life: 1,
+      hue: 190 + Math.random() * 130,
+      size: (Math.random() * 2.2 + 0.8) * DPR
+    });
+  }
+}
+
+function drawNebulas() {
+  for (const n of nebulas) {
+    if (!reduce) {
+      n.x += n.dx * DPR;
+      n.y += n.dy * DPR;
+      if (n.x < -n.r) n.x = W + n.r;
+      if (n.x > W + n.r) n.x = -n.r;
+      if (n.y < -n.r) n.y = H + n.r;
+      if (n.y > H + n.r) n.y = -n.r;
+    }
+    const pulse = reduce ? 1 : (0.85 + 0.15 * Math.sin(t * 0.012 + n.ph));
+    const g = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r * pulse);
+    const [r, gg, b] = n.c;
+    g.addColorStop(0, `rgba(${r},${gg},${b},${n.a * 1.6})`);
+    g.addColorStop(0.45, `rgba(${r},${gg},${b},${n.a * 0.55})`);
+    g.addColorStop(1, `rgba(${r},${gg},${b},0)`);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, n.r * pulse, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawStars() {
+  for (const s of stars) {
+    if (!reduce) {
+      s.y += s.speed * DPR * 0.3;
+      if (s.y > H + 5) { s.y = -5; s.x = Math.random() * W; }
+    }
+    const tw = reduce ? s.a : s.a * (0.5 + 0.5 * Math.sin(t * 0.05 + s.phase));
+    ctx.beginPath();
+    ctx.fillStyle = `hsla(${s.hue}, 90%, 88%, ${tw})`;
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // крупные звёзды с ореолом
+    if (s.r > 1.1 * DPR) {
+      const g = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.r * 7);
+      g.addColorStop(0, `hsla(${s.hue}, 100%, 90%, ${tw * 0.5})`);
+      g.addColorStop(1, `hsla(${s.hue}, 100%, 80%, 0)`);
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r * 7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+function drawMeteors() {
+  for (let i = meteors.length - 1; i >= 0; i--) {
+    const m = meteors[i];
+    m.x += m.vx;
+    m.y += m.vy;
+    m.life -= 0.006;
+    if (m.life <= 0 || m.x < -300 * DPR || m.x > W + 300 * DPR || m.y > H + 300 * DPR) {
+      meteors.splice(i, 1);
+      continue;
+    }
+    const nx = m.x - m.vx * (m.len / Math.hypot(m.vx, m.vy)) * 0.1;
+    const ny = m.y - m.vy * (m.len / Math.hypot(m.vx, m.vy)) * 0.1;
+    const g = ctx.createLinearGradient(m.x, m.y, nx, ny);
+    g.addColorStop(0, `hsla(${m.hue}, 100%, 90%, ${m.life})`);
+    g.addColorStop(0.4, `hsla(${m.hue}, 100%, 75%, ${m.life * 0.5})`);
+    g.addColorStop(1, `hsla(${m.hue}, 100%, 70%, 0)`);
+    ctx.strokeStyle = g;
+    ctx.lineWidth = 1.8 * DPR;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(m.x, m.y);
+    ctx.lineTo(nx, ny);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.fillStyle = `hsla(${m.hue}, 100%, 96%, ${m.life})`;
+    ctx.arc(m.x, m.y, 2.1 * DPR, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawSparks() {
+  for (let i = sparks.length - 1; i >= 0; i--) {
+    const p = sparks[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.03 * DPR;
+    p.vx *= 0.985;
+    p.life -= 0.011;
+    if (p.life <= 0) { sparks.splice(i, 1); continue; }
+    const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 4);
+    g.addColorStop(0, `hsla(${p.hue}, 100%, 82%, ${p.life})`);
+    g.addColorStop(1, `hsla(${p.hue}, 100%, 62%, 0)`);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+let nextMeteor = 0;
+function frame() {
+  t++;
+  ctx.fillStyle = 'rgba(2,3,10,1)';
+  ctx.fillRect(0, 0, W, H);
+
+  drawNebulas();
+  drawStars();
+
+  if (!reduce && t > nextMeteor) {
+    addMeteor();
+    nextMeteor = t + Math.floor(140 + Math.random() * 320);
+  }
+  drawMeteors();
+  drawSparks();
+
+  requestAnimationFrame(frame);
+}
+
+addEventListener('resize', resize);
+resize();
+frame();
+
+const btn = document.getElementById('btn');
+const card = document.getElementById('card');
+const final = document.getElementById('final');
+
+function burst(el) {
+  const r = el.getBoundingClientRect();
+  addSparks((r.left + r.width / 2) * DPR, (r.top + r.height / 2) * DPR, 90);
+}
+
+btn.addEventListener('click', () => {
+  burst(btn);
+  card.style.transition = 'opacity .55s ease, transform .55s ease';
+  card.style.opacity = '0';
+  card.style.transform = 'scale(.96)';
+  setTimeout(() => {
+    card.classList.add('hidden');
+    final.classList.remove('hidden');
+    setTimeout(() => {
+      const r = final.getBoundingClientRect();
+      addSparks(W / 2, r.top * DPR + 130, 140);
+      for (let i = 0; i < 3; i++) setTimeout(addMeteor, i * 220);
+    }, 280);
+  }, 520);
+});
+
+document.addEventListener('click', (e) => {
+  if (e.target === btn) return;
+  addSparks(e.clientX * DPR, e.clientY * DPR, 16);
+});
+</script>
+</body>
+</html>
